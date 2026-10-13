@@ -3,6 +3,7 @@ import {useTranslation} from "react-i18next";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {AxiosError} from "axios";
 import {useIdleTimer} from "react-idle-timer";
+import {useNotificationEvent, useNotificationsClient} from "@buerokratt-ria/notifications/react";
 import {ToastContextType} from "./context/ToastContext.tsx";
 import {MdOutlineExpandMore} from "react-icons/md";
 
@@ -22,11 +23,9 @@ import {
 } from "./constants/config";
 import apiDev from "./services/api-dev";
 import {AUTHORITY} from "./types/authorities";
-import {useCookies} from "react-cookie";
 import "./Header.scss";
 import {UserInfo} from "./types/userInfo.ts";
 import useChatNotifyEffect from "./hooks/useChatNotifyEffect.tsx";
-import sse from "./services/sse-service.ts";
 import {AiOutlineClose} from "react-icons/ai";
 import DomainSelectorBar from "./components/DomainSelectorBar";
 
@@ -63,9 +62,6 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
     const userInfo = user;
     const toast = toastContext;
 
-    const loadActiveChats = useStore((state) => state.loadActiveChats);
-    const pendingChats = useStore((state) => state.loadPendingChats);
-    const validationChats = useStore((state) => (isValidationsEnabled ? state.loadValidationChats : null));
     const queryClient = useQueryClient();
     const [userDrawerOpen, setUserDrawerOpen] = useState(false);
     const [statusCommentOpen, setStatusCommentOpen] = useState(false);
@@ -74,7 +70,6 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
     const [editingStatusComment, setEditingStatusComment] = useState(statusComment);
     const chatCsaActive = useStore((state) => state.chatCsaActive);
     const userProfileSettings = useStore((state) => state.userProfileSettings);
-    const customJwtCookieKey = "customJwtCookie";
 
     useEffect(() => {
         if (userInfo) {
@@ -156,17 +151,14 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
       },
     });
 
-    useEffect(() => {
-        const handlers = [loadActiveChats, ...(validationChats ? [validationChats] : []), pendingChats];
+    useNotificationEvent('chat_status_changed', async () => {
+        const store = useStore.getState();
+        const reloads = [store.loadActiveChats(), store.loadPendingChats()];
 
-        const connections = handlers.map((handler) => sse(`/chat-list`, handler));
+        if (isValidationsEnabled) reloads.push(store.loadValidationChats());
+        await Promise.allSettled(reloads);
+    });
 
-        return () => {
-            connections.forEach((conn) => conn.close());
-        };
-    }, []);
-
-    const [_, setCookie] = useCookies([customJwtCookieKey]);
     const unansweredChatsLength = useStore((state) => state.unansweredChatsLength());
     const forwardedChatsLength = useStore((state) => state.forwordedChatsLength());
     const pendingChatsLength = useStore((state) => state.pendingChatsLength());
@@ -237,14 +229,16 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
         },
     });
 
-  const extendUserSessionMutation = useMutation({
-    mutationFn: () => apiDev.post("extend", {}),
-    onSuccess: () => {
-      const sessionLength = Number(userInfo?.JWTExpirationTimestamp) - Number(userInfo?.JWTCreated);
-      if (sessionLength > 0) localStorage.setItem("exp", String(Date.now() + sessionLength));
-    },
-    onError: (error: AxiosError) => {},
-  });
+    const { reconnect } = useNotificationsClient();
+    const extendUserSessionMutation = useMutation({
+        mutationFn: () => apiDev.post("extend", {}),
+        onSuccess: () => {
+            reconnect()
+
+            const sessionLength = Number(userInfo?.JWTExpirationTimestamp) - Number(userInfo?.JWTCreated);
+            if (sessionLength > 0) localStorage.setItem("exp", String(Date.now() + sessionLength));
+        },
+    });
 
     const logoutMutation = useMutation({
         mutationFn: () => {

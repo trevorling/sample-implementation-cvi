@@ -1,6 +1,10 @@
 # Changelog
 All changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Use the notifications client for chat status updates and reconnect it after extending the user session.
+
 ## [0.1.57] - 21-10-2026
 
 - Fixed truncated and malformed toast messages
