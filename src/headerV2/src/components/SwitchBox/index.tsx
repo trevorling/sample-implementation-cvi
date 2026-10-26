@@ -9,6 +9,7 @@ type SwitchBoxProps = Partial<ControllerRenderProps> & {
   label: string;
   checked?: boolean;
   hideLabel?: boolean;
+  disabled?: boolean;
   onCheckedChange?: (checked: boolean) => void;
 }
 
@@ -17,6 +18,7 @@ const SwitchBox = forwardRef<HTMLButtonElement, SwitchBoxProps>((
     label,
     checked,
     hideLabel,
+    disabled,
     onCheckedChange,
   },
   ref,
@@ -30,8 +32,10 @@ const SwitchBox = forwardRef<HTMLButtonElement, SwitchBoxProps>((
         ref={ref}
         id={id}
         className='switchbox__button'
+        aria-label={hideLabel ? label : undefined}
+        checked={checked}
+        disabled={disabled}
         onCheckedChange={onCheckedChange}
-        defaultChecked={checked}
       >
         <RadixSwitch.Thumb className='switchbox__thumb' />
       </RadixSwitch.Root>

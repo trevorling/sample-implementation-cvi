@@ -1,9 +1,10 @@
-import React, {FC, PropsWithChildren, useEffect, useRef, useState,} from "react";
+import React, {FC, PropsWithChildren, useCallback, useEffect, useRef, useState,} from "react";
 import {useTranslation} from "react-i18next";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {AxiosError} from "axios";
 import {useIdleTimer} from "react-idle-timer";
-import {useNotificationEvent, useNotificationsClient} from "@buerokratt-ria/notifications/react";
+import {useNotificationEvent, useNotificationEvents, useNotificationsClient} from "@buerokratt-ria/notifications/react";
+import type {NotificationData} from "@buerokratt-ria/notifications";
 import {ToastContextType} from "./context/ToastContext.tsx";
 import {MdOutlineExpandMore} from "react-icons/md";
 
@@ -26,8 +27,26 @@ import {AUTHORITY} from "./types/authorities";
 import "./Header.scss";
 import {UserInfo} from "./types/userInfo.ts";
 import useChatNotifyEffect from "./hooks/useChatNotifyEffect.tsx";
+import { usePlayNotificationSound } from "./hooks/usePlayNotificationSound";
 import {AiOutlineClose} from "react-icons/ai";
 import DomainSelectorBar from "./components/DomainSelectorBar";
+
+
+type ServiceWorkerNotificationMessage = {
+    readonly type: "WEB_PUSH";
+    readonly event: {
+        readonly uuid: string;
+        readonly type: SoundNotificationEventType;
+    }
+};
+
+const SOUND_NOTIFICATION_EVENT_TYPES = [
+    "MESSAGE",
+    "CHAT_FORWARDED_TO_CSA",
+] as const;
+
+type SoundNotificationEventType = typeof SOUND_NOTIFICATION_EVENT_TYPES[number];
+type ChatSoundNotificationData = NotificationData<Record<string, unknown>>;
 
 type CustomerSupportActivity = {
     idCode: string;
@@ -70,6 +89,22 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
     const [editingStatusComment, setEditingStatusComment] = useState(statusComment);
     const chatCsaActive = useStore((state) => state.chatCsaActive);
     const userProfileSettings = useStore((state) => state.userProfileSettings);
+    const playForwardedChatSound = usePlayNotificationSound(userProfileSettings.forwardedChatSoundNotifications);
+    const [webPushEnabled, setWebPushEnabled] = useState(
+        () => typeof Notification !== "undefined" && Notification.permission === "granted"
+    );
+    const playSoundForNotificationEvent = useCallback((type: SoundNotificationEventType, uuid: string) => {
+        type = type.toUpperCase() as SoundNotificationEventType;
+        if (
+            type === "MESSAGE" ||
+            type === "CHAT_FORWARDED_TO_CSA"
+        ) {
+            const isDocumentVisible = document.visibilityState === "visible";
+            const isChatWindowInUse = isDocumentVisible && useStore.getState().selectedChatId !== null;
+            if (isChatWindowInUse) return;
+            void playForwardedChatSound(uuid);
+        }
+    }, [playForwardedChatSound]);
 
     useEffect(() => {
         if (userInfo) {
@@ -78,6 +113,75 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
     }, [userInfo]);
 
     useChatNotifyEffect({toast, useStore});
+
+    useEffect(() => {
+        if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+
+        const handleMessage = (event: MessageEvent<ServiceWorkerNotificationMessage>) => {
+            const message = event.data;
+            if (message.type !== "WEB_PUSH") return;
+            const eventType = message.event.type.toUpperCase() as ServiceWorkerNotificationMessage['event']['type'];
+            if (
+                eventType !== "MESSAGE" &&
+                eventType !== "CHAT_FORWARDED_TO_CSA"
+            ) return;
+
+            playSoundForNotificationEvent(eventType, message.event.uuid);
+        };
+
+        navigator.serviceWorker.addEventListener("message", handleMessage);
+
+        return () => {
+            navigator.serviceWorker.removeEventListener("message", handleMessage);
+        };
+    }, [playSoundForNotificationEvent]);
+
+    useNotificationEvents<ChatSoundNotificationData>({
+        // Convert 'MESSAGE' event type to lowercase to match the expected format for the listener.
+        // BE sends message event in lowercase, so we need to convert 'MESSAGE' to lowercase to match it.
+        eventTypes: SOUND_NOTIFICATION_EVENT_TYPES.map((type) => type === 'MESSAGE' ? type.toLowerCase() : type),
+        listener: ({type, data}) => {
+            // Skip playing sound for chat recipient events.
+            if (data.recipient === 'CHAT') {
+                return;
+            }
+            playSoundForNotificationEvent(type as SoundNotificationEventType, data.eventUuid);
+        },
+    });
+
+    const { reconnect, enableWebPush } = useNotificationsClient();
+
+    useEffect(() => {
+        if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+
+        void enableWebPush()
+            .then((result) => {
+                setWebPushEnabled(result.status === "enabled");
+                if (result.status === "enabled") reconnect();
+            })
+            .catch((error) => {
+                console.error("Unable to restore Web Push subscription", error);
+                setWebPushEnabled(false);
+            });
+    }, [enableWebPush, reconnect]);
+
+    const handleEnableWebPush = async (checked: boolean) => {
+        if (!checked) return;
+
+        try {
+            const result = await enableWebPush();
+            setWebPushEnabled(result.status === "enabled");
+            if (result.status === "enabled") reconnect();
+        } catch (error) {
+            setWebPushEnabled(false);
+            console.error("Unable to enable Web Push notifications", error);
+            toast?.open({
+                type: "error",
+                title: t("settings.users.webNotificationsEnableError"),
+                message: t("settings.users.webNotificationsEnableErrorMsg"),
+            });
+        }
+    };
 
     useEffect(() => {
       if(import.meta.env.REACT_APP_LOCAL !== 'true') {
@@ -229,7 +333,6 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
         },
     });
 
-    const { reconnect } = useNotificationsClient();
     const extendUserSessionMutation = useMutation({
         mutationFn: () => apiDev.post("extend", {}),
         onSuccess: () => {
@@ -654,6 +757,19 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
                                             )
                                         }
                                     />
+                                </Track>
+                            </Section>
+                            <Section>
+                                <Track gap={8} direction="vertical" align="left">
+                                    <p className="h6">{t("settings.users.webNotifications")}</p>
+                                    <SwitchBox
+                                        name="webPushNotifications"
+                                        label={t("settings.users.enableWebNotifications")}
+                                        checked={webPushEnabled}
+                                        disabled={webPushEnabled}
+                                        onCheckedChange={handleEnableWebPush}
+                                    />
+                                    <p>{t("settings.users.webNotificationsHelp")}</p>
                                 </Track>
                             </Section>
                         </>

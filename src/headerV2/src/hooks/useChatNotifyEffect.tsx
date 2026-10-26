@@ -1,14 +1,11 @@
 import { useEffect } from "react";
 import { interval } from "rxjs";
 import { useTranslation } from "react-i18next";
-import { useDing } from "./useAudio.tsx";
 import { ToastContextType } from "../context/ToastContext.tsx";
-import { useBrowserNotification } from "./useBrowserNotification";
 import { Chat as ChatType } from "../types/chat.ts";
 
 const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | null; useStore: any }) => {
   const { t } = useTranslation();
-  const { showNotification } = useBrowserNotification();
 
   const unansweredChatsLength = useStore((state) => state.unansweredChatsLength());
   const activeChats = useStore((state) => state.activeChats);
@@ -16,13 +13,9 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
   const validationChatsLength = useStore((state) => state.validationChatsLength());
   const messagesMap = useStore((state) => state.messagesMap());
   const activeChatsLength = useStore((state) => state.activeChats.length);
-  const newChatSoundNotifications = useStore((state) => state.userProfileSettings.newChatSoundNotifications);
   const newChatPopupNotifications = useStore((state) => state.userProfileSettings.newChatPopupNotifications);
   const forwardedChatsLength = useStore((state) => state.forwordedChatsLength());
-  const forwardedChatSoundNotifications = useStore((state) => state.userProfileSettings.forwardedChatSoundNotifications);
   const forwardedChatPopupNotifications = useStore((state) => state.userProfileSettings.forwardedChatPopupNotifications);
-
-  const ding = useDing();
 
   const handleNewMessage = () => {
     if (unansweredChatsLength <= 0 && activeChatsLength <= 0) return;
@@ -34,7 +27,6 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
         const focusedChat = localStorage.getItem("focused_chat");
 
         if (focusedChat === null || focusedChat !== newMessageDetected.id) {
-          if (newChatSoundNotifications) ding?.play();
           if (newChatPopupNotifications) {
             toast?.open({
               type: "info",
@@ -42,7 +34,6 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
               message: t("settings.users.newUnansweredChat"),
             });
           }
-          showNotification();
         }
       }
     }
@@ -58,7 +49,6 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
 
     if (samePreviousValue("byk_header_forwardedChatsLength", forwardedChatsLength)) return;
 
-    if (forwardedChatSoundNotifications) ding?.play();
     if (forwardedChatPopupNotifications)
       toast?.open({
         type: "success",
@@ -78,7 +68,6 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
 
     if (samePreviousValue("byk_header_validationChatsLength", validationChatsLength)) return;
 
-    if (newChatSoundNotifications) ding?.play();
     if (newChatPopupNotifications)
       toast?.open({
         type: "info",
