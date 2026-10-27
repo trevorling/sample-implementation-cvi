@@ -7,7 +7,7 @@
   "author": "ExiRain",
   "license": "ISC",
   "peerDependencies": {
-    "@buerokratt-ria/notifications": "0.0.1",
+    "@buerokratt-ria/notifications": "0.0.2",
     "@fontsource/roboto": "^4.5.8",
     "@formkit/auto-animate": "^0.7.0",
     "@radix-ui/react-accessible-icon": "^1.0.3",

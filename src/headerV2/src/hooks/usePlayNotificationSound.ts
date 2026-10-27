@@ -7,8 +7,8 @@ const STORE_NAME = "played-events";
 const EVENT_RETENTION_MS = 60 * 60 * 1000;
 
 interface PlayedEventRecord {
-  eventUuid: string;
-  createdAt: number;
+  readonly eventUuid: string;
+  readonly createdAt: number;
 }
 
 let databasePromise: Promise<IDBDatabase> | null = null;
