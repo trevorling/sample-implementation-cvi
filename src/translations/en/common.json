@@ -218,7 +218,6 @@
       "soundNotifications": "Sound notifications",
       "popupNotifications": "Popup notifications",
       "webNotifications": "Web notifications",
-      "enableWebNotifications": "Enable web notifications",
       "webNotificationsHelp": "If notifications do not appear, check your browser or device notification settings.",
       "webNotificationsEnableError": "Could not enable web notifications",
       "webNotificationsEnableErrorMsg": "Check your browser or device notification settings.",

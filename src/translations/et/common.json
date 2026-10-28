@@ -218,7 +218,6 @@
       "soundNotifications": "Häälmärguanded",
       "popupNotifications": "Pop-up märguanded",
       "webNotifications": "Veebiteavitused",
-      "enableWebNotifications": "Luba veebiteavitused",
       "webNotificationsHelp": "Kui teavitused ei ilmu, kontrolli brauseri või seadme teavituste seadeid.",
       "webNotificationsEnableError": "Veebiteavitusi ei saanud lubada",
       "webNotificationsEnableErrorMsg": "Kontrolli brauseri või seadme teavituste seadeid.",

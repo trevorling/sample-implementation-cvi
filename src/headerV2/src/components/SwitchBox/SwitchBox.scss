@@ -43,3 +43,7 @@
     transition: all .25s ease-out;
   }
 }
+
+.switchbox__label--bold {
+  font-weight: map-get($cvi-font-weights, 'delta');
+}

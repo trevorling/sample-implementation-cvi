@@ -212,8 +212,15 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
     const getMessages = async () => {
         const {data: res} = await apiDev.get("accounts/settings");
 
-        if (res.response && res.response != "error: not found")
-            useStore.getState().setUserProfileSettings(res.response[0]);
+        if (res.response && res.response != "error: not found") {
+            useStore.getState().setUserProfileSettings({
+                userId: res.response[0].userId,
+                forwardedChatPopupNotifications: res.response[0].forwardedChatPopupNotifications,
+                forwardedChatSoundNotifications: res.response[0].forwardedChatSoundNotifications,
+                forwardedChatEmailNotifications: res.response[0].forwardedChatEmailNotifications,
+                useAutocorrect: res.response[0].useAutocorrect,
+            });
+        }
     };
     const {data: customerSupportActivity, refetch: getCsaActiveStatus} = useQuery<CustomerSupportActivity>({
         queryKey: ["accounts/customer-support-activity", "prod"],
@@ -272,10 +279,7 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
             await apiDev.post("accounts/settings", {
                 forwardedChatPopupNotifications: data.forwardedChatPopupNotifications,
                 forwardedChatSoundNotifications: data.forwardedChatSoundNotifications,
-                forwardedChatEmailNotifications: data.newChatEmailNotifications,
-                newChatPopupNotifications: data.newChatPopupNotifications,
-                newChatSoundNotifications: data.newChatSoundNotifications,
-                newChatEmailNotifications: data.newChatEmailNotifications,
+                forwardedChatEmailNotifications: data.forwardedChatEmailNotifications,
                 useAutocorrect: data.useAutocorrect,
             });
             useStore.getState().setUserProfileSettings(data);
@@ -653,10 +657,10 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
                             {isHiddenFeaturesEnabled && (
                                 <Section>
                                     <Track gap={8} direction="vertical" align="left">
-                                        <p className="h6">{t("settings.users.autoCorrector")}</p>
                                         <SwitchBox
                                             name="useAutocorrect"
-                                            label={t("settings.users.useAutocorrect")}
+                                            label={t("settings.users.autoCorrector")}
+                                            labelClassName="switchbox__label--bold h6"
                                             checked={userProfileSettings.useAutocorrect}
                                             onCheckedChange={(checked) =>
                                                 handleUserProfileSettingsChange(
@@ -671,12 +675,10 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
                             {isHiddenFeaturesEnabled && (
                                 <Section>
                                     <Track gap={8} direction="vertical" align="left">
-                                        <p className="h6">
-                                            {t("settings.users.emailNotifications")}
-                                        </p>
                                         <SwitchBox
                                             name="forwardedChatEmailNotifications"
-                                            label={t("settings.users.newForwardedChat")}
+                                            label={t("settings.users.emailNotifications")}
+                                            labelClassName="switchbox__label--bold h6"
                                             checked={
                                                 userProfileSettings.forwardedChatEmailNotifications
                                             }
@@ -687,26 +689,15 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
                                                 )
                                             }
                                         />
-                                        <SwitchBox
-                                            name="newChatEmailNotifications"
-                                            label={t("settings.users.newUnansweredChat")}
-                                            checked={userProfileSettings.newChatEmailNotifications}
-                                            onCheckedChange={(checked) =>
-                                                handleUserProfileSettingsChange(
-                                                    "newChatEmailNotifications",
-                                                    checked
-                                                )
-                                            }
-                                        />
                                     </Track>
                                 </Section>
                             )}
                             <Section>
                                 <Track gap={8} direction="vertical" align="left">
-                                    <p className="h6">{t("settings.users.soundNotifications")}</p>
                                     <SwitchBox
                                         name="forwardedChatSoundNotifications"
-                                        label={t("settings.users.newForwardedChat")}
+                                        label={t("settings.users.soundNotifications")}
+                                        labelClassName="switchbox__label--bold h6"
                                         checked={
                                             userProfileSettings.forwardedChatSoundNotifications
                                         }
@@ -717,25 +708,14 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
                                             )
                                         }
                                     />
-                                    <SwitchBox
-                                        name="newChatSoundNotifications"
-                                        label={t("settings.users.newUnansweredChat")}
-                                        checked={userProfileSettings.newChatSoundNotifications}
-                                        onCheckedChange={(checked) =>
-                                            handleUserProfileSettingsChange(
-                                                "newChatSoundNotifications",
-                                                checked
-                                            )
-                                        }
-                                    />
                                 </Track>
                             </Section>
                             <Section>
                                 <Track gap={8} direction="vertical" align="left">
-                                    <p className="h6">{t("settings.users.popupNotifications")}</p>
                                     <SwitchBox
                                         name="forwardedChatPopupNotifications"
-                                        label={t("settings.users.newForwardedChat")}
+                                        label={t("settings.users.popupNotifications")}
+                                        labelClassName="switchbox__label--bold h6"
                                         checked={
                                             userProfileSettings.forwardedChatPopupNotifications
                                         }
@@ -746,25 +726,14 @@ const Header: FC<PropsWithChildren<UserStoreStateProps>> = ({user, toastContext,
                                             )
                                         }
                                     />
-                                    <SwitchBox
-                                        name="newChatPopupNotifications"
-                                        label={t("settings.users.newUnansweredChat")}
-                                        checked={userProfileSettings.newChatPopupNotifications}
-                                        onCheckedChange={(checked) =>
-                                            handleUserProfileSettingsChange(
-                                                "newChatPopupNotifications",
-                                                checked
-                                            )
-                                        }
-                                    />
                                 </Track>
                             </Section>
                             <Section>
                                 <Track gap={8} direction="vertical" align="left">
-                                    <p className="h6">{t("settings.users.webNotifications")}</p>
                                     <SwitchBox
                                         name="webPushNotifications"
-                                        label={t("settings.users.enableWebNotifications")}
+                                        label={t("settings.users.webNotifications")}
+                                        labelClassName="switchbox__label--bold h6"
                                         checked={webPushEnabled}
                                         disabled={webPushEnabled}
                                         onCheckedChange={handleEnableWebPush}

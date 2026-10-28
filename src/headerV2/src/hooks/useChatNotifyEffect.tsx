@@ -13,7 +13,6 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
   const validationChatsLength = useStore((state) => state.validationChatsLength());
   const messagesMap = useStore((state) => state.messagesMap());
   const activeChatsLength = useStore((state) => state.activeChats.length);
-  const newChatPopupNotifications = useStore((state) => state.userProfileSettings.newChatPopupNotifications);
   const forwardedChatsLength = useStore((state) => state.forwordedChatsLength());
   const forwardedChatPopupNotifications = useStore((state) => state.userProfileSettings.forwardedChatPopupNotifications);
 
@@ -27,11 +26,11 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
         const focusedChat = localStorage.getItem("focused_chat");
 
         if (focusedChat === null || focusedChat !== newMessageDetected.id) {
-          if (newChatPopupNotifications) {
+          if (forwardedChatPopupNotifications) {
             toast?.open({
-              type: "info",
-              title: t("global.notification"),
-              message: t("settings.users.newUnansweredChat"),
+              type: "success",
+              title: t("settings.users.newForwardedChatTitle"),
+              message: t("settings.users.newForwardedChatMessage"),
             });
           }
         }
@@ -68,7 +67,7 @@ const useChatNotifyEffect = ({ toast, useStore }: { toast: ToastContextType | nu
 
     if (samePreviousValue("byk_header_validationChatsLength", validationChatsLength)) return;
 
-    if (newChatPopupNotifications)
+    if (forwardedChatPopupNotifications)
       toast?.open({
         type: "info",
         title: t("global.notification"),
